@@ -15,7 +15,7 @@
   --bg:#f6f7f8; --surface:#fdfdfd; --ink:#0f1215; --ink-2:#4b5258; --muted:#868d93;
   --grid:#e3e6e9; --axis:#c3c8cc; --ring:rgba(15,18,21,.10);
   --s1:#2a78d6; --s2:#eb6834; --s1-wash:rgba(42,120,214,.10); --s2-wash:rgba(235,104,52,.08);
-  --good:#006300; --bad:#c22f2f; --chip:#eceff2;
+  --good:#006300; --bad:#c22f2f; --chip:#eceff2; --bar:rgba(246,247,248,.92);
   --f-body:"IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
 }
@@ -23,15 +23,15 @@
   --bg:#0e1012; --surface:#17191b; --ink:#f4f6f7; --ink-2:#c1c6ca; --muted:#8a9196;
   --grid:#272a2d; --axis:#3a3e42; --ring:rgba(255,255,255,.10);
   --s1:#3987e5; --s2:#d95926; --s1-wash:rgba(57,135,229,.14); --s2-wash:rgba(217,89,38,.10);
-  --good:#2fb52f; --bad:#ec6a6a; --chip:#23262a; color-scheme:dark}}
+  --good:#2fb52f; --bad:#ec6a6a; --chip:#23262a; --bar:rgba(14,16,18,.92); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1012; --surface:#17191b; --ink:#f4f6f7; --ink-2:#c1c6ca; --muted:#8a9196;
   --grid:#272a2d; --axis:#3a3e42; --ring:rgba(255,255,255,.10);
   --s1:#3987e5; --s2:#d95926; --s1-wash:rgba(57,135,229,.14); --s2-wash:rgba(217,89,38,.10);
-  --good:#2fb52f; --bad:#ec6a6a; --chip:#23262a; color-scheme:dark}
+  --good:#2fb52f; --bad:#ec6a6a; --chip:#23262a; --bar:rgba(14,16,18,.92); color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;margin:0}
-.wrap{max-width:960px;margin:0 auto;padding-inline:20px;padding-block:32px 64px;display:grid;gap:28px}
+.wrap{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:20px 56px;display:grid;gap:26px}
 h1,h2{text-wrap:balance;margin:0;line-height:1.3}
 h1{font-size:28px;font-weight:700;letter-spacing:-.01em}
 h2{font-size:17px;font-weight:600}
@@ -39,13 +39,15 @@ p{margin:0}
 .sub{color:var(--ink-2);max-width:65ch}
 .mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 header{display:grid;gap:14px}
-nav{display:flex;gap:16px;font-size:14px}
-nav a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid transparent}
-nav a:hover{border-color:var(--ink-2)}
-nav a[aria-current="page"]{color:var(--ink);font-weight:600}
 .toprow{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
-.seg{display:inline-flex;background:var(--chip);border-radius:8px;padding:3px;gap:2px}
-.seg button{font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--ink-2);padding:6px 18px;border-radius:6px;cursor:pointer}
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bar);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--grid)}
+.bar-in{max-width:960px;margin:0 auto;padding-inline:16px;padding-block:8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+nav{display:flex;gap:4px;font-size:14px}
+nav a{color:var(--ink-2);text-decoration:none;padding:8px 10px;border-radius:6px}
+nav a[aria-current="page"]{color:var(--ink);font-weight:600;background:var(--chip)}
+nav a:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+.seg{display:inline-flex;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
+.seg button{font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--ink-2);padding:7px 16px;border-radius:7px;cursor:pointer;min-height:38px}
 .seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--ring)}
 .seg button:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
 .period{color:var(--muted);font-size:13px}
@@ -95,6 +97,9 @@ ul.plain b{color:var(--ink);font-weight:600}
   .mini div+div{border-left:0}
   .mini div:nth-child(even){border-left:1px solid var(--grid)}
   .mini div:nth-child(n+3){border-top:1px solid var(--grid)}
+  .mini div:last-child{grid-column:1/-1;border-left:0}
+  .tile .val{font-size:26px}
+  .rules span{font-size:12px}
   .two{grid-template-columns:minmax(0,1fr)}
   h1{font-size:23px}
 }
@@ -104,16 +109,16 @@ ul.plain b{color:var(--ink);font-weight:600}
 <body>
 
 
+<div class="bar"><div class="bar-in">
+  <nav><a href="./" aria-current="page">백테스트</a><a href="./order.html">주문표</a></nav>
+  <div class="seg" role="group" aria-label="종목 선택">
+    <button id="btn-SOXL" type="button" aria-pressed="true" data-t="SOXL">SOXL</button>
+    <button id="btn-TQQQ" type="button" aria-pressed="false" data-t="TQQQ">TQQQ</button>
+  </div>
+</div></div>
 <div class="wrap">
   <header>
-    <nav><a href="./" aria-current="page">백테스트</a><a href="./order.html">주문표</a></nav>
-    <div class="toprow">
-      <h1>LOC 5분할 백테스트</h1>
-      <div class="seg" role="group" aria-label="종목 선택">
-        <button id="btn-SOXL" type="button" aria-pressed="true" data-t="SOXL">SOXL</button>
-        <button id="btn-TQQQ" type="button" aria-pressed="false" data-t="TQQQ">TQQQ</button>
-      </div>
-    </div>
+    <h1>LOC 5분할 백테스트</h1>
     <p class="sub">2일 전·1일 전·당일 종가의 3일 평균을 기준으로 매일 장마감 LOC 주문을 넣는 5분할 매매입니다. 같은 규칙을 두 레버리지 ETF에 그대로 적용했습니다.</p>
     <div class="rules">
       <span>매수 <b>종가 ≤ 3일평균 × 0.995</b></span>
@@ -207,7 +212,8 @@ function tiles(D){
 }
 
 /* ---------- time-series charts (equity + drawdown, synced crosshair) ---------- */
-const W=920, PADL=58, PADR=16;
+let W=920, PADL=58, PADR=16;
+const narrow=()=>W<520;
 let charts=[];
 function tsChart(host,H,series,yScale,yTicks,yFmt,tipRows){
   host.innerHTML='';
@@ -221,7 +227,7 @@ function tsChart(host,H,series,yScale,yTicks,yFmt,tipRows){
   const g=el('g',{},svg);
   yTicks.forEach(v=>{const yy=y(v);el('line',{x1:PADL,x2:W-PADR,y1:yy,y2:yy,stroke:'var(--grid)','stroke-width':1},g);const t=el('text',{x:PADL-8,y:yy+4,'text-anchor':'end'},g);t.textContent=yFmt(v)});
   const y0=+series.dates[0].slice(0,4), y1=+series.dates[n-1].slice(0,4);
-  for(let yr=y0+1;yr<=y1;yr++){const tx=PADL+(Date.parse(yr+'-01-01')-t0)/(t1-t0)*iw;if(yr%2)continue;const t=el('text',{x:tx,y:H-8,'text-anchor':'middle'},g);t.textContent=yr;el('line',{x1:tx,x2:tx,y1:H-PADB,y2:H-PADB+4,stroke:'var(--axis)'},g)}
+  for(let yr=y0+1;yr<=y1;yr++){const tx=PADL+(Date.parse(yr+'-01-01')-t0)/(t1-t0)*iw;if(yr%(narrow()?4:2))continue;const t=el('text',{x:tx,y:H-8,'text-anchor':'middle'},g);t.textContent=yr;el('line',{x1:tx,x2:tx,y1:H-PADB,y2:H-PADB+4,stroke:'var(--axis)'},g)}
   el('line',{x1:PADL,x2:W-PADR,y1:H-PADB,y2:H-PADB,stroke:'var(--axis)'},g);
   // paths
   series.lines.forEach(L=>{
@@ -236,7 +242,7 @@ function tsChart(host,H,series,yScale,yTicks,yFmt,tipRows){
   (series.marks||[]).forEach(m=>{
     const cx=x(m.i),cy=y(m.v);
     el('circle',{cx,cy,r:4,fill:m.color,stroke:'var(--surface)','stroke-width':2},svg);
-    const anchor=cx>W*0.6?'end':'start';const t=el('text',{x:cx+(anchor==='end'?-8:8),y:cy+(m.dy||4),'text-anchor':anchor,style:'fill:var(--ink-2)'},svg);t.textContent=m.label;
+    const anchor=cx>W*0.6?'end':'start';const t=el('text',{x:cx+(anchor==='end'?-8:8),y:cy+(m.dy||4),'text-anchor':anchor,style:'fill:var(--ink-2);stroke:var(--surface);stroke-width:3px;stroke-linejoin:round;paint-order:stroke'},svg);t.textContent=m.label;
   });
   // end labels
   const cross=el('line',{y1:PADT,y2:H-PADB,stroke:'var(--axis)','stroke-width':1,visibility:'hidden'},svg);
@@ -272,10 +278,10 @@ function drawTS(D){
   const rowsDd=i=>`<div class="r"><span><i style="background:var(--s1)"></i>5분할</span><span class="num">${pct(ddE[i]*100)}</span></div><div class="r"><span><i style="background:var(--s2)"></i>단순보유</span><span class="num">${pct(ddB[i]*100)}</span></div>`;
   charts=[];
   const lastE=e[n-1], lastB=b[n-1];
-  charts.push(tsChart($('c-eq'),340,{dates:D.d,lines:[{v:b,color:'var(--s2)',w:1.5,op:.9},{v:e,color:'var(--s1)'}],
+  charts.push(tsChart($('c-eq'),narrow()?250:340,{dates:D.d,lines:[{v:b,color:'var(--s2)',w:1.5,op:.9},{v:e,color:'var(--s1)'}],
     marks:[{i:n-1,v:lastE,color:'var(--s1)',label:fmtCompact(lastE),dy:lastE<lastB?14:-6},{i:n-1,v:lastB,color:'var(--s2)',label:fmtCompact(lastB),dy:lastE<lastB?-6:14}]},
     ls,ticks,v=>fmtCompact(v),rowsEq));
-  charts.push(tsChart($('c-dd'),220,{dates:D.d,lines:[{v:ddB,color:'var(--s2)',w:1.5,op:.9},{v:ddE,color:'var(--s1)',fill:'var(--s1-wash)',fillTo:0}],
+  charts.push(tsChart($('c-dd'),narrow()?170:220,{dates:D.d,lines:[{v:ddB,color:'var(--s2)',w:1.5,op:.9},{v:ddE,color:'var(--s1)',fill:'var(--s1-wash)',fillTo:0}],
     marks:[{i:ti,v:ddE[ti],color:'var(--s1)',label:'MDD '+pct(D.strat.mdd)+' · '+kdate(D.strat.trough),dy:16}]},
     v=>(0-v)/(0-dmin),dTicks,v=>v===0?'0%':Math.round(v*100)+'%',rowsDd));
 }
@@ -283,7 +289,7 @@ function drawTS(D){
 /* ---------- yearly grouped bars ---------- */
 function drawYears(D){
   const host=$('c-yr');host.innerHTML='';
-  const yrs=Object.keys(D.ys), H=280, PADT=12, PADB=26, iw=W-PADL-PADR, ih=H-PADT-PADB;
+  const yrs=Object.keys(D.ys), H=narrow()?220:280, PADT=12, PADB=26, iw=W-PADL-PADR, ih=H-PADT-PADB;
   const vals=yrs.flatMap(y=>[D.ys[y],D.yb[y]]);
   const vmax=Math.max(100,Math.ceil(Math.max(...vals)/100)*100), vmin=Math.min(-100,Math.floor(Math.min(...vals)/50)*50);
   const y=v=>PADT+(vmax-v)/(vmax-vmin)*ih;
@@ -321,8 +327,14 @@ function tables(D){
 function render(){
   const D=DATA[cur];
   document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===cur));
-  tiles(D);drawTS(D);drawYears(D);tables(D);
+  tiles(D);tables(D);drawCharts();
 }
+function drawCharts(){
+  const D=DATA[cur];
+  W=Math.max(300,Math.round($('c-eq').clientWidth-8));PADL=narrow()?46:58;PADR=narrow()?10:16;
+  drawTS(D);drawYears(D);
+}
+let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(drawCharts,150)});
 document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{cur=b.dataset.t;try{localStorage.setItem('loc5-ticker',cur)}catch(e){}render()}));
 render();
 </script>
