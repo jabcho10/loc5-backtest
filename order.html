@@ -201,7 +201,7 @@ hr{border:0;border-top:1px solid var(--grid);margin:0}
   <details id="setup">
     <summary>계좌 설정</summary>
     <div class="inner">
-      <p class="hint">현금을 입력하면 티어 금액은 (현금 + 보유 티어 원가) ÷ 분할 수로 자동 계산됩니다. 실제 체결이 계산과 달랐다면(부분 체결, 주문 누락 등) 여기서 현금과 티어를 고치세요.</p>
+      <p class="hint">보유 티어가 없을 때는 현금을 입력하면 티어 금액이 현금 ÷ 분할 수로 자동 계산됩니다. 사이클 진행 중에는 티어 금액이 고정되고, 추가한 현금은 사이클이 끝날 때 재분할에 포함됩니다. 실제 체결이 계산과 달랐다면(부분 체결, 주문 누락 등) 여기서 현금과 티어를 고치세요.</p>
       <div class="fields">
         <label for="f-cash">현금 ($)<input id="f-cash" type="number" inputmode="decimal" step="0.01" min="0"></label>
         <label for="f-last">마지막 반영 종가일<input id="f-last" type="date"></label>
@@ -275,7 +275,8 @@ function limits(c2,c1,p){const b=p.br/100,s=p.sr/100;return {buy:floorC((c2+c1)*
 function buyQty(st,px){const f=st.params.fee/100;let q=Math.floor(st.tierAmt/px);if(q*px*(1+f)>st.cash)q=Math.floor(st.cash/(px*(1+f)));return Math.max(0,q)}
 const held=st=>st.tiers.reduce((a,t)=>a+t.q,0);
 const costBasis=st=>st.tiers.reduce((a,t)=>a+t.q*t.p,0);
-const autoTier=(cash,st)=>(cash+costBasis(st))/st.params.N;
+// tier size is fixed for the whole cycle; it is re-split only when no tiers are held
+const autoTier=(cash,st)=>st.tiers.length?st.tierAmt:cash/st.params.N;
 function nextBizDay(d){const x=new Date(d+'T12:00:00Z');do{x.setUTCDate(x.getUTCDate()+1)}while(x.getUTCDay()===0||x.getUTCDay()===6);return x.toISOString().slice(0,10)}
 
 /* one day's result for the orders placed from the two closes before it */
@@ -367,7 +368,8 @@ function render(){
 function calcTier(){
   const cash=parseFloat($('f-cash').value);
   const n=S.params.N, cb=costBasis(S);
-  $('tier-calc').innerHTML=isFinite(cash)?`티어 금액 <b>${usd(autoTier(cash,S))}</b> = (현금 ${usd(cash)}${cb?` + 보유 원가 ${usd(cb)}`:''}) ÷ ${n}`:'현금을 입력하세요.';
+  $('tier-calc').innerHTML=S.tiers.length?`사이클 진행 중이라 티어 금액은 <b>${usd(S.tierAmt)}</b>로 고정됩니다. 전량 매도하면 그때 총자산 ÷ ${n}으로 다시 나눕니다.`
+    :isFinite(cash)?`티어 금액 <b>${usd(cash/n)}</b> = 현금 ${usd(cash)} ÷ ${n}`:'현금을 입력하세요.';
 }
 function calcSeed(){const v=parseFloat($('s-seed').value);$('seed-calc').innerHTML=isFinite(v)&&v>0?`티어 금액 <b>${usd(v/S.params.N)}</b> = ${usd(v)} ÷ ${S.params.N}`:'투자금을 입력하세요.'}
 
