@@ -1,0 +1,36 @@
+name: Update prices
+
+on:
+  schedule:
+    # 미국 장 마감(16:00 ET) 이후. 서머타임 여부와 관계없이 마감 뒤에 돌도록 두 번 실행
+    - cron: "30 21 * * 1-5"
+    - cron: "30 23 * * 1-5"
+    # 아침 보조 실행 (전날 실행이 실패했을 때 대비)
+    - cron: "0 11 * * 2-6"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prices
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install yfinance
+      - run: python scripts/update_prices.py
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- prices.json; then echo "no change"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898333+github-actions[bot]@users.noreply.github.com"
+          git add prices.json
+          git commit -m "Update prices"
+          git push

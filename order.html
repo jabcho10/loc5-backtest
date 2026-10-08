@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="LOC 5분할 매매의 다음 거래일 매수·매도 주문표와 계좌 기록">
+<title>LOC 5분할 주문표</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: one column. Order ticket first (what to type into the broker today), then pending fills, holdings, log, settings. */
+:root{
+  --bg:#f6f7f8; --surface:#fdfdfd; --ink:#0f1215; --ink-2:#4b5258; --muted:#868d93;
+  --grid:#e3e6e9; --axis:#c3c8cc; --ring:rgba(15,18,21,.10); --chip:#eceff2;
+  --buy:#2a78d6; --buy-wash:rgba(42,120,214,.09); --sell:#eb6834; --sell-wash:rgba(235,104,52,.09);
+  --good:#006300; --bad:#c22f2f; --warn-bg:#fff4dc; --warn-ink:#7a4b00;
+  --f-body:"IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1012; --surface:#17191b; --ink:#f4f6f7; --ink-2:#c1c6ca; --muted:#8a9196;
+  --grid:#272a2d; --axis:#3a3e42; --ring:rgba(255,255,255,.10); --chip:#23262a;
+  --buy:#3987e5; --buy-wash:rgba(57,135,229,.13); --sell:#d95926; --sell-wash:rgba(217,89,38,.13);
+  --good:#2fb52f; --bad:#ec6a6a; --warn-bg:#3a2c0e; --warn-ink:#f5c870; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1012; --surface:#17191b; --ink:#f4f6f7; --ink-2:#c1c6ca; --muted:#8a9196;
+  --grid:#272a2d; --axis:#3a3e42; --ring:rgba(255,255,255,.10); --chip:#23262a;
+  --buy:#3987e5; --buy-wash:rgba(57,135,229,.13); --sell:#d95926; --sell-wash:rgba(217,89,38,.13);
+  --good:#2fb52f; --bad:#ec6a6a; --warn-bg:#3a2c0e; --warn-ink:#f5c870; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:880px;margin:0 auto;padding-inline:20px;padding-block:28px 64px;display:grid;gap:26px}
+h1,h2{margin:0;line-height:1.3;text-wrap:balance}
+h1{font-size:26px;font-weight:700;letter-spacing:-.01em}
+h2{font-size:17px;font-weight:600}
+p{margin:0}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .sub{color:var(--ink-2);max-width:65ch}
+nav{display:flex;gap:16px;font-size:14px}
+nav a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid transparent}
+nav a:hover{border-color:var(--ink-2)}
+nav a[aria-current="page"]{color:var(--ink);font-weight:600}
+header{display:grid;gap:12px}
+.toprow{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
+.seg{display:inline-flex;background:var(--chip);border-radius:8px;padding:3px;gap:2px}
+.seg button{font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--ink-2);padding:6px 18px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--ring)}
+button:focus-visible,input:focus-visible,summary:focus-visible,textarea:focus-visible{outline:2px solid var(--buy);outline-offset:2px}
+.status{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted);align-items:center}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--good)}
+.dot.stale{background:var(--bad)}
+.banner{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:10px 14px;font-size:14px}
+
+.ticket{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.order{background:var(--surface);border-radius:12px;box-shadow:0 0 0 1px var(--ring);padding:16px 18px;display:grid;gap:10px;min-width:0;position:relative;overflow:hidden}
+.order::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--c)}
+.order.buy{--c:var(--buy)} .order.sell{--c:var(--sell)}
+.order.off{opacity:.55}
+.order .kind{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.order .kind b{font-size:15px}
+.pill{font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--chip);color:var(--ink-2);white-space:nowrap}
+.order .px{font-family:var(--f-mono);font-size:34px;font-weight:600;letter-spacing:-.02em;line-height:1.15}
+.order .px small{font-size:15px;color:var(--muted);font-weight:500;margin-left:6px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-size:13.5px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.cond{font-size:13px;color:var(--ink-2);background:var(--chip);border-radius:6px;padding:6px 10px}
+.copy{font:inherit;font-size:12.5px;border:0;background:var(--chip);color:var(--ink-2);border-radius:6px;padding:3px 10px;cursor:pointer}
+
+section{display:grid;gap:10px;min-width:0}
+.shead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px}
+.card{background:var(--surface);border-radius:12px;box-shadow:0 0 0 1px var(--ring);padding:14px 16px;min-width:0}
+.chart svg{display:block;width:100%;height:auto}
+.chart text{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+.chart .lbl{fill:var(--ink-2)}
+.tw{overflow-x:auto;background:var(--surface);border-radius:12px;box-shadow:0 0 0 1px var(--ring)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:7px 12px;text-align:right;white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:12px;border-bottom:1px solid var(--grid)}
+th:first-child,td:first-child{text-align:left}
+tbody tr+tr td{border-top:1px solid var(--grid)}
+td.pos{color:var(--good)} td.neg{color:var(--bad)}
+.empty{padding:16px;color:var(--muted);font-size:14px}
+.acct{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--grid);border-bottom:1px solid var(--grid)}
+.acct div{padding:10px 12px;display:grid;min-width:0}
+.acct div+div{border-left:1px solid var(--grid)}
+.acct .lab{font-size:12px;color:var(--muted)} .acct .v{font-size:17px;font-weight:600;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+.btn{font:inherit;font-size:14px;font-weight:600;border:0;border-radius:8px;padding:8px 16px;cursor:pointer;background:var(--ink);color:var(--bg)}
+.btn.ghost{background:var(--chip);color:var(--ink)}
+.btn.danger{background:transparent;color:var(--bad);box-shadow:inset 0 0 0 1px var(--bad)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pending{display:grid;gap:8px}
+.pday{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 14px;font-size:14px;padding:8px 0}
+.pday+.pday{border-top:1px solid var(--grid)}
+.tag{font-size:12px;font-weight:600;padding:1px 8px;border-radius:999px}
+.tag.b{background:var(--buy-wash);color:var(--buy)} .tag.s{background:var(--sell-wash);color:var(--sell)} .tag.n{background:var(--chip);color:var(--muted)}
+.xbtn{font:inherit;font-size:12px;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:2px 6px}
+.xbtn:hover{color:var(--bad)}
+
+details{background:var(--surface);border-radius:12px;box-shadow:0 0 0 1px var(--ring)}
+details>summary{cursor:pointer;padding:12px 16px;font-weight:600;font-size:15px}
+details>.inner{padding:0 16px 16px;display:grid;gap:12px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px 14px}
+label{display:grid;gap:3px;font-size:13px;color:var(--ink-2)}
+input,textarea{font:inherit;font-family:var(--f-mono);font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--grid);border-radius:6px;padding:6px 9px;width:100%;min-width:0}
+textarea{min-height:90px;font-size:12px}
+.hint{font-size:12.5px;color:var(--muted)}
+.confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--bad)}
+@media (max-width:680px){
+  .ticket{grid-template-columns:minmax(0,1fr)}
+  .acct{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .acct div+div{border-left:0} .acct div:nth-child(even){border-left:1px solid var(--grid)} .acct div:nth-child(n+3){border-top:1px solid var(--grid)}
+  h1{font-size:22px} .order .px{font-size:30px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <nav><a href="./">백테스트</a><a href="./order.html" aria-current="page">주문표</a></nav>
+    <div class="toprow">
+      <h1>LOC 5분할 주문표</h1>
+      <div class="seg" role="group" aria-label="종목 선택">
+        <button id="t-SOXL" type="button" data-t="SOXL" aria-pressed="true">SOXL</button>
+        <button id="t-TQQQ" type="button" data-t="TQQQ" aria-pressed="false">TQQQ</button>
+      </div>
+    </div>
+    <p class="sub">최근 두 거래일 종가로 다음 거래일 장 마감 LOC 주문 가격과 수량을 계산합니다. 시세는 매일 장 마감 후 자동으로 갱신됩니다.</p>
+    <div class="status" id="status"></div>
+    <div class="banner" id="banner" hidden></div>
+  </header>
+
+  <section>
+    <div class="shead"><h2 id="ticket-title">다음 거래일 주문</h2><span class="muted" id="ticket-basis"></span></div>
+    <div class="ticket">
+      <div class="order buy" id="o-buy"></div>
+      <div class="order sell" id="o-sell"></div>
+    </div>
+    <p class="hint">두 조건은 같은 날 함께 충족될 수 없어서, 매수와 매도 주문을 동시에 넣어도 하나만 체결됩니다. 매수가는 센트 단위로 내림, 매도가는 올림했습니다.</p>
+  </section>
+
+  <section id="pend-sec" hidden>
+    <div class="shead"><h2>반영할 체결 결과</h2><span class="muted">주문을 넣었다면 체결 여부를 계좌에 반영하세요</span></div>
+    <div class="card pending" id="pending"></div>
+  </section>
+
+  <section>
+    <div class="shead"><h2>계좌</h2><span class="muted" id="acct-note"></span></div>
+    <div class="acct" id="acct"></div>
+    <div class="tw"><table><thead><tr><th>티어</th><th>매수일</th><th>수량</th><th>매수가</th><th>평가손익</th><th></th></tr></thead><tbody id="tiers"></tbody></table></div>
+  </section>
+
+  <section>
+    <div class="shead"><h2>최근 종가와 주문선</h2><span class="muted">최근 30거래일</span></div>
+    <div class="card chart" id="chart"></div>
+  </section>
+
+  <section>
+    <h2>매매 기록</h2>
+    <div class="tw"><table><thead><tr><th>날짜</th><th>종가</th><th>결과</th><th>수량</th><th>금액</th><th>현금</th></tr></thead><tbody id="log"></tbody></table></div>
+  </section>
+
+  <details id="setup">
+    <summary>계좌 설정 · 직접 수정</summary>
+    <div class="inner">
+      <p class="hint">처음 시작할 때 투자금을 넣고 시작하세요. 실제 체결이 계산과 다르면(부분 체결, 주문 누락 등) 여기서 현금과 티어를 직접 고칠 수 있습니다.</p>
+      <div class="fields">
+        <label for="f-cash">현금 ($)<input id="f-cash" type="number" step="0.01" min="0"></label>
+        <label for="f-tier">티어 금액 ($)<input id="f-tier" type="number" step="0.01" min="0"></label>
+        <label for="f-last">마지막 반영 종가일<input id="f-last" type="date"></label>
+      </div>
+      <div class="row"><button class="btn ghost" id="save-acct" type="button">계좌 저장</button><span class="hint" id="save-msg"></span></div>
+      <hr style="border:0;border-top:1px solid var(--grid);margin:0">
+      <div class="fields">
+        <label for="n-date">티어 추가: 매수일<input id="n-date" type="date"></label>
+        <label for="n-qty">수량<input id="n-qty" type="number" step="1" min="1"></label>
+        <label for="n-px">매수가 ($)<input id="n-px" type="number" step="0.01" min="0"></label>
+      </div>
+      <div class="row"><button class="btn ghost" id="add-tier" type="button">티어 추가</button><span class="hint">추가해도 현금은 자동으로 줄지 않습니다.</span></div>
+      <hr style="border:0;border-top:1px solid var(--grid);margin:0">
+      <div class="fields">
+        <label for="s-seed">새로 시작: 투자금 ($)<input id="s-seed" type="number" step="100" min="0" value="10000"></label>
+      </div>
+      <div class="row"><button class="btn" id="start" type="button">이 금액으로 새로 시작</button></div>
+      <div class="confirm" id="start-confirm" hidden>지금 기록과 보유 티어가 모두 지워집니다.<button class="btn danger" id="start-yes" type="button">지우고 시작</button><button class="btn ghost" id="start-no" type="button">취소</button></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>전략 설정</summary>
+    <div class="inner">
+      <div class="fields">
+        <label for="p-n">분할 수<input id="p-n" type="number" step="1" min="1" max="20"></label>
+        <label for="p-br">매수 비율 (%)<input id="p-br" type="number" step="0.1"></label>
+        <label for="p-sr">매도 비율 (%)<input id="p-sr" type="number" step="0.1"></label>
+        <label for="p-fee">수수료 편도 (%)<input id="p-fee" type="number" step="0.01" min="0"></label>
+      </div>
+      <p class="hint">기본값은 백테스트와 같은 5분할, 매수 −0.5%, 매도 +0.9%, 수수료 0.07%입니다. 주문가 = (2일 전 종가 + 1일 전 종가) × (1 + 비율) ÷ (2 − 비율).</p>
+      <div class="row"><button class="btn ghost" id="save-params" type="button">설정 저장</button><button class="btn ghost" id="reset-params" type="button">기본값으로</button></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>백업 · 복원</summary>
+    <div class="inner">
+      <p class="hint">기록은 이 브라우저에만 저장됩니다. 다른 기기로 옮기거나 브라우저 데이터를 지우기 전에 아래 내용을 복사해두세요.</p>
+      <textarea id="backup" spellcheck="false"></textarea>
+      <div class="row"><button class="btn ghost" id="copy-backup" type="button">복사</button><button class="btn ghost" id="restore" type="button">붙여넣은 내용으로 복원</button><span class="hint" id="backup-msg"></span></div>
+    </div>
+  </details>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const DEF={N:5,br:-0.5,sr:0.9,fee:0.07};
+const usd=v=>'$'+(+v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const usd0=v=>'$'+Math.round(v).toLocaleString('en-US');
+const pct=v=>(v>0?'+':v<0?'−':'')+Math.abs(v).toFixed(2)+'%';
+const kd=s=>s?s.replaceAll('-','.'):'–';
+const floorC=v=>Math.floor(v*100+1e-9)/100, ceilC=v=>Math.ceil(v*100-1e-9)/100;
+
+let PRICES={}, UPDATED='', cur='SOXL', S=null;
+function store(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function load(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+try{const t=localStorage.getItem('loc5-ticker');if(t==='SOXL'||t==='TQQQ')cur=t}catch(e){}
+
+function fresh(seed){const P=PRICES[cur]||[];return {params:{...DEF},cash:seed,tierAmt:seed/DEF.N,tiers:[],log:[],last:P.length?P[P.length-1][0]:null}}
+function getState(){let s=load('loc5-'+cur);if(!s){s=fresh(10000);s.example=true}s.params={...DEF,...(s.params||{})};return s}
+function save(){delete S.example;store('loc5-'+cur,S)}
+
+function limits(c2,c1,p){const b=p.br/100,s=p.sr/100;return {buy:floorC((c2+c1)*(1+b)/(2-b)),sell:ceilC((c2+c1)*(1+s)/(2-s)),bx:(c2+c1)*(1+b)/(2-b),sx:(c2+c1)*(1+s)/(2-s)}}
+function buyQty(st,px){const f=st.params.fee/100;let q=Math.floor(st.tierAmt/px);if(q*px*(1+f)>st.cash)q=Math.floor(st.cash/(px*(1+f)));return Math.max(0,q)}
+const held=st=>st.tiers.reduce((a,t)=>a+t.q,0);
+const costBasis=st=>st.tiers.reduce((a,t)=>a+t.q*t.p,0);
+function nextBizDay(d){const x=new Date(d+'T12:00:00Z');do{x.setUTCDate(x.getUTCDate()+1)}while(x.getUTCDay()===0||x.getUTCDay()===6);return x.toISOString().slice(0,10)}
+
+/* simulate one day's result for the orders that were placed from the two closes before it */
+function simulateDay(st,i){
+  const P=PRICES[cur], c2=P[i-2][1], c1=P[i-1][1], [d,c]=P[i], L=limits(c2,c1,st.params), f=st.params.fee/100;
+  if(st.tiers.length&&c>=L.sell){const q=held(st);return {d,c,type:'sell',q,amt:q*c*(1-f),L}}
+  if(st.tiers.length<st.params.N&&c<=L.buy){const q=buyQty(st,L.buy);if(q>0)return {d,c,type:'buy',q,amt:q*c*(1+f),L}}
+  return {d,c,type:'none',q:0,amt:0,L};
+}
+function applyDay(st,r){
+  if(r.type==='sell'){st.cash+=r.amt;st.tiers=[];st.tierAmt=st.cash/st.params.N}
+  else if(r.type==='buy'){st.cash-=r.amt;st.tiers.push({d:r.d,q:r.q,p:r.c})}
+  st.last=r.d;st.log.unshift({d:r.d,c:r.c,type:r.type,q:r.q,amt:r.amt,cash:st.cash});
+  st.log=st.log.slice(0,400);
+}
+function pendingIdx(){const P=PRICES[cur]||[];if(!S.last)return[];const out=[];P.forEach((r,i)=>{if(r[0]>S.last&&i>=2)out.push(i)});return out}
+
+function render(){
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===cur));
+  const P=PRICES[cur]||[];
+  // status
+  const lastD=P.length?P[P.length-1][0]:null;
+  const age=lastD?Math.round((Date.now()-Date.parse(lastD+'T21:00:00Z'))/864e5):99;
+  $('status').innerHTML=`<span><span class="dot${age>4?' stale':''}"></span>${lastD?`${kd(lastD)} 종가까지 반영`:'시세 없음'}</span><span>시세 갱신 ${UPDATED||'–'}</span>`;
+  const ban=[];
+  if(S.example)ban.push('아직 계좌를 설정하지 않아 투자금 $10,000, 보유 없음으로 가정한 예시 주문입니다. 아래 "계좌 설정"에서 실제 투자금으로 시작하세요.');
+  if(age>4&&lastD)ban.push('시세가 4일 넘게 갱신되지 않았습니다. 휴장 기간이 아니라면 자동 갱신이 멈췄을 수 있습니다.');
+  $('banner').hidden=!ban.length;$('banner').innerHTML=ban.join('<br>');
+  if(P.length<2){$('o-buy').innerHTML=$('o-sell').innerHTML='<div class="empty">시세를 불러오지 못했습니다.</div>';return}
+
+  // ticket: based on the state's last processed close (pending days must be applied first)
+  const pend=pendingIdx();
+  const baseIdx=pend.length?pend[0]-1:P.length-1;
+  const c1=P[baseIdx][1], c2=P[baseIdx-1][1], L=limits(c2,c1,S.params), f=S.params.fee/100;
+  const day=pend.length?P[pend[0]][0]:nextBizDay(P[baseIdx][0]);
+  $('ticket-title').textContent=pend.length?`${kd(day)} 주문 (체결 결과 반영 대기)`:`${kd(day)} 장 마감 주문`;
+  $('ticket-basis').innerHTML=`기준 종가 <span class="num">${kd(P[baseIdx-1][0])} ${usd(c2)} · ${kd(P[baseIdx][0])} ${usd(c1)}</span>`;
+  const nT=S.tiers.length, full=nT>=S.params.N, bq=full?0:buyQty(S,L.buy);
+  $('o-buy').className='order buy'+(full||!bq?' off':'');
+  $('o-buy').innerHTML=`<div class="kind"><b>LOC 매수</b><span class="pill">${full?'5티어 모두 보유 · 대기':`${nT+1}번째 티어`}</span></div>
+    <div class="px">${usd(L.buy)}<small>이하</small></div>
+    <dl class="kv"><dt>수량</dt><dd>${full?'–':bq.toLocaleString()+'주'}</dd><dt>최대 금액</dt><dd>${full?'–':usd(bq*L.buy*(1+f))}</dd><dt>전일 종가 대비</dt><dd>${pct((L.buy/c1-1)*100)}</dd></dl>
+    <div class="cond">종가 ≤ 3일 평균 × ${(1+S.params.br/100).toFixed(3)} 일 때 체결</div>
+    ${full||!bq?'':`<div class="row"><button class="copy" type="button" data-copy="${L.buy.toFixed(2)}">가격 복사</button><button class="copy" type="button" data-copy="${bq}">수량 복사</button></div>`}`;
+  const hq=held(S), avg=hq?costBasis(S)/hq:0;
+  $('o-sell').className='order sell'+(hq?'':' off');
+  $('o-sell').innerHTML=`<div class="kind"><b>LOC 매도</b><span class="pill">${hq?`보유 ${nT}티어 전량`:'보유 없음'}</span></div>
+    <div class="px">${usd(L.sell)}<small>이상</small></div>
+    <dl class="kv"><dt>수량</dt><dd>${hq?hq.toLocaleString()+'주':'–'}</dd><dt>평단 대비</dt><dd class="${hq&&L.sell<avg?'neg':''}">${hq?pct((L.sell/avg-1)*100):'–'}</dd><dt>전일 종가 대비</dt><dd>${pct((L.sell/c1-1)*100)}</dd></dl>
+    <div class="cond">종가 ≥ 3일 평균 × ${(1+S.params.sr/100).toFixed(3)} 일 때 체결${hq&&L.sell<avg?' · 손실이어도 전량 매도':''}</div>
+    ${hq?`<div class="row"><button class="copy" type="button" data-copy="${L.sell.toFixed(2)}">가격 복사</button><button class="copy" type="button" data-copy="${hq}">수량 복사</button></div>`:''}`;
+
+  // pending
+  $('pend-sec').hidden=!pend.length||S.example;
+  if(pend.length&&!S.example){
+    const sim=JSON.parse(JSON.stringify(S));const rows=pend.map(i=>{const r=simulateDay(sim,i);applyDay(sim,r);return r});
+    const tag=r=>r.type==='buy'?`<span class="tag b">매수 체결</span> <span class="num">${r.q}주 @ ${usd(r.c)}</span>`:r.type==='sell'?`<span class="tag s">전량 매도</span> <span class="num">${r.q}주 @ ${usd(r.c)}</span>`:'<span class="tag n">미체결</span>';
+    $('pending').innerHTML=rows.map(r=>`<div class="pday"><span class="num">${kd(r.d)} 종가 ${usd(r.c)}</span><span>${tag(r)}</span></div>`).join('')+
+      `<div class="row"><button class="btn" id="apply-one" type="button">${kd(rows[0].d)} 결과 반영</button>${rows.length>1?`<button class="btn ghost" id="apply-all" type="button">${rows.length}일치 모두 반영</button>`:''}<button class="btn ghost" id="skip-one" type="button">주문 안 넣음 (${kd(rows[0].d)} 건너뛰기)</button></div>`;
+    $('apply-one').onclick=()=>{const r=simulateDay(S,pend[0]);applyDay(S,r);save();render()};
+    if($('apply-all'))$('apply-all').onclick=()=>{pend.forEach(i=>applyDay(S,simulateDay(S,i)));save();render()};
+    $('skip-one').onclick=()=>{const [d,c]=P[pend[0]];S.last=d;S.log.unshift({d,c,type:'skip',q:0,amt:0,cash:S.cash});save();render()};
+  }
+
+  // account
+  const lastC=P[P.length-1][1], val=hq*lastC, eq=S.cash+val;
+  $('acct').innerHTML=[['총자산',usd0(eq)],['현금',usd0(S.cash)],['보유 평가',usd0(val)],['티어 금액',usd0(S.tierAmt)]].map(a=>`<div><span class="lab">${a[0]}</span><span class="v">${a[1]}</span></div>`).join('');
+  $('acct-note').textContent=hq?`평단 ${usd(avg)} · ${kd(P[P.length-1][0])} 종가 ${usd(lastC)} 기준`:`${kd(P[P.length-1][0])} 종가 기준`;
+  $('tiers').innerHTML=S.tiers.length?S.tiers.map((t,k)=>{const pl=(lastC/t.p-1)*100;return `<tr><td>${k+1}</td><td class="num">${kd(t.d)}</td><td class="num">${t.q.toLocaleString()}</td><td class="num">${usd(t.p)}</td><td class="num ${pl>0?'pos':pl<0?'neg':''}">${pct(pl)}</td><td><button class="xbtn" type="button" data-del="${k}" aria-label="${k+1}번째 티어 삭제">삭제</button></td></tr>`}).join('')
+    :`<tr><td colspan="6" class="empty">보유 중인 티어가 없습니다. 매수 주문이 체결되면 여기에 쌓입니다.</td></tr>`;
+
+  // log
+  const lab={buy:'<span class="tag b">매수</span>',sell:'<span class="tag s">전량 매도</span>',none:'<span class="tag n">미체결</span>',skip:'<span class="tag n">건너뜀</span>',start:'<span class="tag n">시작</span>'};
+  $('log').innerHTML=S.log.length?S.log.slice(0,60).map(r=>`<tr><td class="num">${kd(r.d)}</td><td class="num">${r.c?usd(r.c):'–'}</td><td>${lab[r.type]||r.type}</td><td class="num">${r.q?r.q.toLocaleString():'–'}</td><td class="num">${r.amt?usd(r.amt):'–'}</td><td class="num">${usd0(r.cash)}</td></tr>`).join('')
+    :`<tr><td colspan="6" class="empty">아직 기록이 없습니다.</td></tr>`;
+
+  drawChart(P.slice(-30),L,avg);
+  // forms
+  $('f-cash').value=S.cash.toFixed(2);$('f-tier').value=S.tierAmt.toFixed(2);$('f-last').value=S.last||'';
+  $('p-n').value=S.params.N;$('p-br').value=S.params.br;$('p-sr').value=S.params.sr;$('p-fee').value=S.params.fee;
+  $('backup').value=JSON.stringify({ticker:cur,...S});
+  if(!$('n-date').value)$('n-date').value=P[P.length-1][0];
+}
+
+function drawChart(rows,L,avg){
+  const W=840,H=230,PL=62,PR=96,PT=12,PB=24,iw=W-PL-PR,ih=H-PT-PB;
+  const vals=rows.map(r=>r[1]).concat([L.buy,L.sell]).concat(avg?[avg]:[]);
+  let lo=Math.min(...vals),hi=Math.max(...vals);const pad=(hi-lo)*.08;lo-=pad;hi+=pad;
+  const x=i=>PL+i/(rows.length)*iw, y=v=>PT+(hi-v)/(hi-lo)*ih;
+  const step=niceStep((hi-lo)/4);let g='';
+  for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step){g+=`<line x1="${PL}" x2="${W-PR}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${PL-8}" y="${y(v)+4}" text-anchor="end">${v>=100?v.toFixed(0):v.toFixed(1)}</text>`}
+  rows.forEach((r,i)=>{if(i%5===0)g+=`<text x="${x(i)}" y="${H-6}" text-anchor="middle">${r[0].slice(5).replace('-','.')}</text>`});
+  const d=rows.map((r,i)=>(i?'L':'M')+x(i).toFixed(1)+','+y(r[1]).toFixed(1)).join('');
+  const xn=x(rows.length);
+  const hl=(v,c,t)=>`<line x1="${x(rows.length-1)}" x2="${xn}" y1="${y(v)}" y2="${y(v)}" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="${xn}" cy="${y(v)}" r="4" fill="${c}" stroke="var(--surface)" stroke-width="2"/><text class="lbl" x="${xn+8}" y="${y(v)+4}">${t}</text>`;
+  let avgLine=avg?`<line x1="${PL}" x2="${xn}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/><text class="lbl" x="${PL+4}" y="${y(avg)-5}">평단 ${avg.toFixed(2)}</text>`:'';
+  $('chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="최근 종가와 다음 주문 가격">${g}${avgLine}<path d="${d}" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(rows.length-1)}" cy="${y(rows[rows.length-1][1])}" r="4" fill="var(--ink-2)" stroke="var(--surface)" stroke-width="2"/>${hl(L.sell,'var(--sell)','매도 '+L.sell.toFixed(2))}${hl(L.buy,'var(--buy)','매수 '+L.buy.toFixed(2))}</svg>`;
+}
+function niceStep(r){const p=10**Math.floor(Math.log10(r)),m=r/p;return (m<1.5?1:m<3?2:m<7?5:10)*p}
+
+/* events */
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{cur=b.dataset.t;try{localStorage.setItem('loc5-ticker',cur)}catch(e){}S=getState();$('n-date').value='';render()});
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-copy]');
+  if(c){const v=c.dataset.copy,old=c.textContent;navigator.clipboard.writeText(v).then(()=>{c.textContent='복사됨 '+v},()=>{c.textContent=v}).finally(()=>setTimeout(()=>c.textContent=old,1500))}
+  const del=e.target.closest('[data-del]');
+  if(del){S.tiers.splice(+del.dataset.del,1);save();render()}
+});
+$('save-acct').onclick=()=>{S.cash=+$('f-cash').value||0;S.tierAmt=+$('f-tier').value||0;S.last=$('f-last').value||S.last;save();render();$('save-msg').textContent='저장했습니다.'};
+$('add-tier').onclick=()=>{const q=+$('n-qty').value,p=+$('n-px').value,d=$('n-date').value;if(!(q>0&&p>0&&d)){$('save-msg').textContent='매수일, 수량, 매수가를 모두 입력하세요.';return}S.tiers.push({d,q,p});S.tiers.sort((a,b)=>a.d<b.d?-1:1);save();$('n-qty').value=$('n-px').value='';render()};
+$('start').onclick=()=>{if(S.example||!S.log.length&&!S.tiers.length){begin()}else $('start-confirm').hidden=false};
+$('start-no').onclick=()=>$('start-confirm').hidden=true;
+$('start-yes').onclick=()=>{$('start-confirm').hidden=true;begin()};
+function begin(){const seed=+$('s-seed').value||0;const p=S.params;S=fresh(seed);S.params=p;S.tierAmt=seed/p.N;const P=PRICES[cur];S.log=[{d:S.last,c:P[P.length-1][1],type:'start',q:0,amt:0,cash:seed}];save();render()}
+$('save-params').onclick=()=>{S.params={N:Math.max(1,Math.round(+$('p-n').value||5)),br:+$('p-br').value,sr:+$('p-sr').value,fee:+$('p-fee').value};if(!S.tiers.length)S.tierAmt=S.cash/S.params.N;save();render()};
+$('reset-params').onclick=()=>{S.params={...DEF};save();render()};
+$('copy-backup').onclick=()=>{const t=$('backup');navigator.clipboard.writeText(t.value).then(()=>$('backup-msg').textContent='복사했습니다.',()=>{t.select();$('backup-msg').textContent='선택했습니다. Ctrl+C로 복사하세요.'})};
+$('restore').onclick=()=>{try{const o=JSON.parse($('backup').value);if(!o||!Array.isArray(o.tiers)||typeof o.cash!=='number')throw 0;const t=o.ticker==='TQQQ'?'TQQQ':o.ticker==='SOXL'?'SOXL':cur;delete o.ticker;cur=t;S=o;S.params={...DEF,...(o.params||{})};save();try{localStorage.setItem('loc5-ticker',cur)}catch(e){}render();$('backup-msg').textContent=`${cur} 기록을 복원했습니다.`}catch(e){$('backup-msg').textContent='복원할 수 없는 내용입니다. 복사한 백업 전체를 붙여넣었는지 확인하세요.'}};
+
+fetch('prices.json?ts='+Math.floor(Date.now()/6e5),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{PRICES=j.prices;UPDATED=j.updated}).catch(()=>{PRICES={};UPDATED=''}).finally(()=>{S=getState();render()});
+</script>
+</body>
+</html>

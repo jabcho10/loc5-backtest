@@ -39,6 +39,10 @@ p{margin:0}
 .sub{color:var(--ink-2);max-width:65ch}
 .mono,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 header{display:grid;gap:14px}
+nav{display:flex;gap:16px;font-size:14px}
+nav a{color:var(--ink-2);text-decoration:none;border-bottom:1px solid transparent}
+nav a:hover{border-color:var(--ink-2)}
+nav a[aria-current="page"]{color:var(--ink);font-weight:600}
 .toprow{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
 .seg{display:inline-flex;background:var(--chip);border-radius:8px;padding:3px;gap:2px}
 .seg button{font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--ink-2);padding:6px 18px;border-radius:6px;cursor:pointer}
@@ -102,6 +106,7 @@ ul.plain b{color:var(--ink);font-weight:600}
 
 <div class="wrap">
   <header>
+    <nav><a href="./" aria-current="page">백테스트</a><a href="./order.html">주문표</a></nav>
     <div class="toprow">
       <h1>LOC 5분할 백테스트</h1>
       <div class="seg" role="group" aria-label="종목 선택">
