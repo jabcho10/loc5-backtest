@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="LOC 주문표">
-<script>try{const t=localStorage.getItem('loc5-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<script>{let t='light';try{if(localStorage.getItem('loc5-theme')==='dark')t='dark'}catch(e){}document.documentElement.dataset.theme=t}</script>
 <title>LOC 5분할 주문표</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -612,7 +612,7 @@ $('restore').onclick=()=>{try{const o=JSON.parse($('backup').value);if(!o||!(Arr
 
 fetch('prices.json?ts='+Math.floor(Date.now()/6e5),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{PRICES=j.prices||{};UPDATED=j.updated||''}).catch(()=>{PRICES={};UPDATED=''}).finally(()=>{S=getState();render()});
 
-/* light/dark toggle: follows the device until the viewer picks one, then remembers it */
+/* light/dark toggle: white by default (as in the design), dark only when the viewer picks it */
 {const root=document.documentElement,mq=matchMedia('(prefers-color-scheme: dark)');
  const isDark=()=>root.dataset.theme?root.dataset.theme==='dark':mq.matches;
  // a picked theme also recolors the phone's status bar; the first matching theme-color meta wins, so it goes first

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="SOXL·TQQQ에 3일 평균 기준 LOC 5분할 매매를 적용한 백테스트 결과">
 <style>:root{color-scheme:light}html,body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
-<script>try{const t=localStorage.getItem('loc5-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<script>{let t='light';try{if(localStorage.getItem('loc5-theme')==='dark')t='dark'}catch(e){}document.documentElement.dataset.theme=t}</script>
 <title>LOC 5분할 백테스트</title>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
@@ -68,7 +68,7 @@ nav a:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radiu
 .custom{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--hair);border-radius:9999px;padding:4px 16px;min-height:46px}
 .custom:hover{border-color:var(--ink)}
 .custom.on{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-.custom input{font:inherit;font-size:14px;font-weight:500;color:var(--ink);background:transparent;border:0;padding:4px 2px;min-height:36px;font-variant-numeric:tabular-nums;color-scheme:light dark}
+.custom input{font:inherit;font-size:14px;font-weight:500;color:var(--ink);background:transparent;border:0;padding:4px 2px;min-height:36px;font-variant-numeric:tabular-nums;color-scheme:inherit}
 .custom input:focus-visible{outline:2px solid var(--ink);outline-offset:1px;border-radius:6px}
 .custom span{color:var(--muted)}
 .rules{display:flex;flex-wrap:wrap;gap:8px}
@@ -517,7 +517,7 @@ fetch('prices.json?ts='+Math.floor(Date.now()/6e5),{cache:'no-store'}).then(r=>{
   if(added)render();else tiles(V);
 }).catch(()=>{});
 
-/* light/dark toggle: follows the device until the viewer picks one, then remembers it */
+/* light/dark toggle: white by default (as in the design), dark only when the viewer picks it */
 {const root=document.documentElement,mq=matchMedia('(prefers-color-scheme: dark)');
  const isDark=()=>root.dataset.theme?root.dataset.theme==='dark':mq.matches;
  // a picked theme also recolors the phone's status bar; the first matching theme-color meta wins, so it goes first
