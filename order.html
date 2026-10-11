@@ -18,7 +18,7 @@
 :root{
   --bg:#f6f7f8; --surface:#fdfdfd; --ink:#0f1215; --ink-2:#4b5258; --muted:#868d93;
   --grid:#e3e6e9; --axis:#c3c8cc; --ring:rgba(15,18,21,.10); --chip:#eceff2; --bar:rgba(246,247,248,.92);
-  --buy:#2a78d6; --buy-wash:rgba(42,120,214,.09); --sell:#eb6834; --sell-wash:rgba(235,104,52,.09);
+  --buy:#2a78d6; --buy-wash:rgba(42,120,214,.09); --sell:#eb6834; --sell-wash:rgba(235,104,52,.09); --avg:#7c4dcc;
   --good:#006300; --bad:#c22f2f; --warn-bg:#fff4dc; --warn-ink:#7a4b00;
   --f-body:"IBM Plex Sans KR", system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
   --f-mono:"IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
@@ -27,12 +27,12 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e1012; --surface:#17191b; --ink:#f4f6f7; --ink-2:#c1c6ca; --muted:#8a9196;
   --grid:#272a2d; --axis:#3a3e42; --ring:rgba(255,255,255,.10); --chip:#23262a; --bar:rgba(14,16,18,.92);
-  --buy:#3987e5; --buy-wash:rgba(57,135,229,.13); --sell:#d95926; --sell-wash:rgba(217,89,38,.13);
+  --buy:#3987e5; --buy-wash:rgba(57,135,229,.13); --sell:#d95926; --sell-wash:rgba(217,89,38,.13); --avg:#a989ec;
   --good:#2fb52f; --bad:#ec6a6a; --warn-bg:#3a2c0e; --warn-ink:#f5c870; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1012; --surface:#17191b; --ink:#f4f6f7; --ink-2:#c1c6ca; --muted:#8a9196;
   --grid:#272a2d; --axis:#3a3e42; --ring:rgba(255,255,255,.10); --chip:#23262a; --bar:rgba(14,16,18,.92);
-  --buy:#3987e5; --buy-wash:rgba(57,135,229,.13); --sell:#d95926; --sell-wash:rgba(217,89,38,.13);
+  --buy:#3987e5; --buy-wash:rgba(57,135,229,.13); --sell:#d95926; --sell-wash:rgba(217,89,38,.13); --avg:#a989ec;
   --good:#2fb52f; --bad:#ec6a6a; --warn-bg:#3a2c0e; --warn-ink:#f5c870; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -92,6 +92,10 @@ section{display:grid;gap:10px;min-width:0}
 .chart{padding:10px 8px 6px}
 .chart svg{display:block;width:100%}
 .chart text{font-family:var(--f-mono);font-size:11px;fill:var(--muted)}
+.chart .legend{display:flex;flex-wrap:wrap;gap:4px 14px;padding:2px 8px 6px;font-size:13px;color:var(--ink-2)}
+.chart .legend span{display:inline-flex;align-items:center;gap:6px}
+.chart .legend i{width:14px;height:0;border-top:2px solid currentColor;display:inline-block}
+.chart .legend b{font-family:var(--f-mono);font-weight:600;color:var(--ink)}
 .chart .lbl{fill:var(--ink-2);font-size:11.5px;stroke:var(--surface);stroke-width:3px;stroke-linejoin:round;paint-order:stroke}
 
 .acct{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));background:var(--surface);border-radius:14px;box-shadow:0 0 0 1px var(--ring)}
@@ -219,7 +223,7 @@ hr{border:0;border-top:1px solid var(--grid);margin:0}
   </section>
 
   <section>
-    <div class="shead"><h2>최근 종가와 주문선</h2><span class="muted">최근 30거래일</span></div>
+    <div class="shead"><h2>최근 종가와 주문선</h2><span class="muted">최근 30거래일 · 평단은 체결가 기준</span></div>
     <div class="card chart" id="chart"></div>
   </section>
 
@@ -375,7 +379,7 @@ function render(){
 
   renderTicket();renderFill();renderAccount();renderLog();
   const pend=pendingIdx(), bi=pend.length?pend[0]:p.length;
-  LAST={rows:p.slice(-30),L:bi<p.length?ordersFor(bi):limits(p[p.length-2][1],p[p.length-1][1],S.params),avg:held(D)?costBasis(D)/held(D):0};drawChart();
+  LAST={rows:p.slice(-30),L:bi<p.length?ordersFor(bi):limits(p[p.length-2][1],p[p.length-1][1],S.params),avg:held(D)?costBasis(D)/held(D):0,hq:held(D)};drawChart();
   $('p-n').value=S.params.N;$('p-br').value=S.params.br;$('p-sr').value=S.params.sr;$('p-fee').value=S.params.fee;
   $('backup').value=JSON.stringify({ticker:cur,...S});
   if(!$('n-date').value)$('n-date').value=lastD;
@@ -512,7 +516,7 @@ function calcCash(){const v=parseFloat($('c-cash').value);$('cash-calc').innerHT
 /* ---------- chart ---------- */
 let LAST=null;
 function drawChart(){
-  if(!LAST||!LAST.L)return;const {rows,L,avg}=LAST, host=$('chart');
+  if(!LAST||!LAST.L)return;const {rows,L,avg,hq}=LAST, host=$('chart');
   const W=Math.max(300,Math.round(host.clientWidth-16)), narrow=W<520, H=narrow?200:230;
   const PL=narrow?40:54, PR=narrow?96:104, PT=12, PB=24, iw=W-PL-PR, ih=H-PT-PB;
   const vals=rows.map(r=>r[1]).concat([L.buy,L.sell]).concat(avg?[avg]:[]);
@@ -524,10 +528,19 @@ function drawChart(){
   rows.forEach((r,i)=>{if(i%every===0)g+=`<text x="${x(i)}" y="${H-6}" text-anchor="middle">${sd(r[0])}</text>`});
   const d=rows.map((r,i)=>(i?'L':'M')+x(i).toFixed(1)+','+y(r[1]).toFixed(1)).join('');
   const xe=x(rows.length-1), xn=x(rows.length);
-  let yb=y(L.buy), ys=y(L.sell); if(ys>yb-14){const m=(ys+yb)/2;ys=m-7;yb=m+7}
+  // right-edge labels: keep them at least 14px apart, in price order
+  const tags=[{v:L.sell,c:'var(--sell)',t:'매도 '+L.sell.toFixed(2),k:'s'},{v:L.buy,c:'var(--buy)',t:'매수 '+L.buy.toFixed(2),k:'b'}];
+  if(avg)tags.push({v:avg,c:'var(--avg)',t:'평단 '+avg.toFixed(2),k:'a'});
+  tags.forEach(o=>o.yl=y(o.v));tags.sort((a,b)=>a.yl-b.yl);
+  for(let k=1;k<tags.length;k++)if(tags[k].yl<tags[k-1].yl+14)tags[k].yl=tags[k-1].yl+14;
+  const over=tags[tags.length-1].yl-(H-PB);if(over>0)tags.forEach(o=>o.yl-=over);
+  for(let k=tags.length-2;k>=0;k--)if(tags[k].yl>tags[k+1].yl-14)tags[k].yl=tags[k+1].yl-14;
+  const TY=Object.fromEntries(tags.map(o=>[o.k,o.yl]));
   const hl=(v,yl,c,t)=>`<line x1="${xe}" x2="${xn}" y1="${y(v)}" y2="${y(v)}" stroke="${c}" stroke-width="2" stroke-linecap="round"/><circle cx="${xn}" cy="${y(v)}" r="4" fill="${c}" stroke="var(--surface)" stroke-width="2"/><text class="lbl" x="${xn+8}" y="${yl+4}">${t}</text>`;
-  const avgLine=avg?`<line x1="${PL}" x2="${xn}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--muted)" stroke-width="1" stroke-dasharray="3 3"/><text class="lbl" x="${PL+4}" y="${y(avg)-5}">평단 ${avg.toFixed(2)}</text>`:'';
-  host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="최근 종가와 다음 주문 가격">${g}${avgLine}<path d="${d}" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${xe}" cy="${y(rows[rows.length-1][1])}" r="4" fill="var(--ink-2)" stroke="var(--surface)" stroke-width="2"/>${hl(L.sell,ys,'var(--sell)','매도 '+L.sell.toFixed(2))}${hl(L.buy,yb,'var(--buy)','매수 '+L.buy.toFixed(2))}</svg>`;
+  const avgLine=avg?`<line x1="${PL}" x2="${xn}" y1="${y(avg)}" y2="${y(avg)}" stroke="var(--avg)" stroke-width="1.5" stroke-dasharray="5 4"/><circle cx="${xn}" cy="${y(avg)}" r="4" fill="var(--avg)" stroke="var(--surface)" stroke-width="2"/><text class="lbl" x="${xn+8}" y="${TY.a+4}">평단 ${avg.toFixed(2)}</text>`:'';
+  const lastC=rows[rows.length-1][1];
+  const legend=`<div class="legend"><span style="color:var(--ink-2)"><i></i>종가 <b>${lastC.toFixed(2)}</b></span><span style="color:var(--buy)"><i></i>매수선 <b>${L.buy.toFixed(2)}</b></span><span style="color:var(--sell)"><i></i>매도선 <b>${L.sell.toFixed(2)}</b></span><span style="color:var(--avg)"><i style="border-top-style:dashed"></i>${avg?`내 평단 <b>${avg.toFixed(2)}</b> (${hq.toLocaleString()}주 · 종가 대비 ${pct((lastC/avg-1)*100)})`:'내 평단 – (보유 없음)'}</span></div>`;
+  host.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="최근 종가, 다음 주문 가격, 체결 기준 평단">${g}${avgLine}<path d="${d}" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${xe}" cy="${y(rows[rows.length-1][1])}" r="4" fill="var(--ink-2)" stroke="var(--surface)" stroke-width="2"/>${hl(L.sell,TY.s,'var(--sell)','매도 '+L.sell.toFixed(2))}${hl(L.buy,TY.b,'var(--buy)','매수 '+L.buy.toFixed(2))}</svg>${legend}`;
 }
 function niceStep(r){const p=10**Math.floor(Math.log10(r)),m=r/p;return (m<1.5?1:m<3?2:m<7?5:10)*p}
 let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(drawChart,120)});
