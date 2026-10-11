@@ -1,7 +1,9 @@
 """Fetch recent daily closes for SOXL/TQQQ and merge them into prices.json.
 
 Closes are split-adjusted but not dividend-adjusted (auto_adjust=False), which
-matches the prices LOC orders are actually placed at. Today's bar is dropped
+matches the prices LOC orders are actually placed at. The fetch covers more than
+KEEP days, so every kept close is re-adjusted on each run and a split never leaves
+older closes on a different basis. Today's bar is dropped
 while the US session is still open so a partial close never lands in the file.
 """
 import json, sys, time
@@ -20,7 +22,7 @@ NY = ZoneInfo("America/New_York")
 def fetch(tries=3):
     for k in range(tries):
         try:
-            df = yf.download(TICKERS, period="3mo", interval="1d", auto_adjust=False, progress=False)
+            df = yf.download(TICKERS, period="2y", interval="1d", auto_adjust=False, progress=False)
             if not df.empty:
                 return df["Close"]
         except Exception as e:  # network hiccups on shared runners

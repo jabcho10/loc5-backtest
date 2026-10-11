@@ -204,7 +204,7 @@ ul.plain b{color:var(--ink);font-weight:600}
   <section>
     <h2>읽을 때 참고할 점</h2>
     <ul class="plain">
-      <li>모든 주문은 당일 종가에 체결된 것으로 가정했습니다. LOC 지정가는 전날까지의 종가로 미리 계산되므로 미래 정보를 쓰지 않습니다.</li>
+      <li>모든 주문은 당일 종가에 체결된 것으로 가정했습니다. LOC 지정가는 전날까지의 종가로 미리 계산되므로 미래 정보를 쓰지 않습니다. 매수 수량도 주문표와 같이 종가가 아닌 지정가 기준(티어 금액 ÷ 지정가)으로 정합니다.</li>
       <li>MDD는 사이클 손익이 아니라 <b>매일 장마감 평가액</b>(현금 + 보유 주식 × 종가) 기준입니다.</li>
       <li>5번째 티어는 수수료 때문에 현금이 조금 모자라므로 남은 현금으로 살 수 있는 만큼만 삽니다.</li>
       <li>놀고 있는 현금의 이자, 슬리피지, 세금, 환전 비용은 반영하지 않았습니다.</li>
@@ -256,9 +256,11 @@ function run(D,i0,i1){
         for(const t of tiers){const p=t.sh*c*(1-FEE);val+=p;cost+=t.co;tr.push([p/t.co-1,i-t.bi])}
         cash+=val;cyc.push([D.d[cs],D.d[i],tiers.length,(val/cost-1)*100]);tiers=[];ta=cash/5;
       }
-      if(c<=s*0.995/2.005&&tiers.length<5){
-        let sh=Math.floor(ta/c);
-        if(sh*c*(1+FEE)>cash)sh=Math.floor(cash/(c*(1+FEE)));
+      const lb=s*0.995/2.005;
+      if(c<=lb&&tiers.length<5){
+        // LOC quantity is fixed before the close, so size it off the limit price like the order ticket does
+        let sh=Math.floor(ta/lb);
+        if(sh*lb*(1+FEE)>cash)sh=Math.floor(cash/(lb*(1+FEE)));
         if(sh>0){if(!tiers.length)cs=i;const co=sh*c*(1+FEE);cash-=co;tiers.push({sh,co,bi:i})}
       }
     }
@@ -480,8 +482,11 @@ render();
 fetch('prices.json?ts='+Math.floor(Date.now()/6e5),{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error(r.status);return r.json()}).then(j=>{
   let added=0;
   for(const t in DATA){
-    const D=DATA[t],last=D.d[D.d.length-1];
-    for(const [d,c] of (j.prices||{})[t]||[])if(d>last&&c>0){D.d.push(d);D.c.push(c);added++}
+    const D=DATA[t],last=D.d[D.d.length-1],P=(j.prices||{})[t]||[],o=P.find(r=>r[0]===last);
+    if(!o)continue; // no overlapping day: appending would join two series that may not line up
+    // after a split the fresh closes are on a new basis: rescale the embedded history to match
+    const k=o[1]/D.c[D.c.length-1];if(Math.abs(k-1)>0.01){D.c=D.c.map(v=>v*k);added++}
+    for(const [d,c] of P)if(d>last&&c>0){D.d.push(d);D.c.push(c);added++}
     D.end=D.d[D.d.length-1];
   }
   UPDATED=j.updated||'';

@@ -246,7 +246,7 @@ hr{border:0;border-top:1px solid var(--grid);margin:0}
       <p class="hint">입금·출금이나 증권사 잔고와 차이가 날 때 현금을 맞춥니다. 사이클 진행 중에는 티어 금액이 그대로이고, 사이클이 끝날 때 재분할에 반영됩니다.</p>
       <div class="fields">
         <label for="c-cash">현금을 이 금액으로 ($)<input id="c-cash" type="number" inputmode="decimal" step="0.01" min="0"></label>
-        <label for="c-date">날짜<input id="c-date" type="date"></label>
+        <label for="c-date">날짜 (이 날 체결 후 잔고)<input id="c-date" type="date"></label>
       </div>
       <div class="calc" id="cash-calc"></div>
       <div class="row"><button class="btn ghost" id="cash-save" type="button">현금 조정 기록</button><span class="hint" id="cash-msg" role="status"></span></div>
@@ -321,7 +321,8 @@ function migrate(o){
 }
 function getState(){const raw=load('loc5-'+cur);if(!raw){const s=freshState(10000,latestDate());s.example=true;return s}return migrate(raw)}
 function save(){delete S.example;store('loc5-'+cur,S)}
-const rank={start:0,hold:1,setcash:2,buy:3,sell:3,none:3};
+// a cash adjustment is the balance after that day's fills, so it replays after same-day trades
+const rank={start:0,hold:1,buy:3,sell:3,none:3,setcash:4};
 // the start entry always replays first; everything else by date, then type rank, then entry order
 function sorted(L){return L.map((e,i)=>[e,i]).sort((a,b)=>((a[0].type==='start'?0:1)-(b[0].type==='start'?0:1))||(a[0].d<b[0].d?-1:a[0].d>b[0].d?1:0)||(rank[a[0].type]-rank[b[0].type])||(a[1]-b[1])).map(x=>x[0])}
 
