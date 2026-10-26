@@ -272,22 +272,6 @@ hr{border:0;border-top:1px solid var(--grid);margin:0}
       <div class="calc" id="seed-calc"></div>
       <div class="row"><button class="btn" id="start" type="button">이 금액으로 새로 시작</button></div>
       <div class="confirm" id="start-confirm" hidden>지금 기록과 보유 티어가 모두 지워집니다.<button class="btn danger" id="start-yes" type="button">지우고 시작</button><button class="btn ghost" id="start-no" type="button">취소</button></div>
-      <hr>
-      <p class="hint">입금·출금이나 증권사 잔고와 차이가 날 때 현금을 맞춥니다. 사이클 진행 중에는 티어 금액이 그대로이고, 사이클이 끝날 때 재분할에 반영됩니다.</p>
-      <div class="fields">
-        <label for="c-cash">현금을 이 금액으로 ($)<input id="c-cash" type="number" inputmode="decimal" step="0.01" min="0"></label>
-        <label for="c-date">날짜 (이 날 체결 후 잔고)<input id="c-date" type="date"></label>
-      </div>
-      <div class="calc" id="cash-calc"></div>
-      <div class="row"><button class="btn ghost" id="cash-save" type="button">현금 조정 기록</button><span class="hint" id="cash-msg" role="status"></span></div>
-      <hr>
-      <p class="hint">이 페이지를 쓰기 전에 이미 보유하던 티어를 넣습니다. 현금은 줄지 않습니다.</p>
-      <div class="fields">
-        <label for="n-date">매수일<input id="n-date" type="date"></label>
-        <label for="n-qty">수량 (주)<input id="n-qty" type="number" inputmode="numeric" step="1" min="1"></label>
-        <label for="n-px">매수가 ($)<input id="n-px" type="number" inputmode="decimal" step="0.01" min="0"></label>
-      </div>
-      <div class="row"><button class="btn ghost" id="add-tier" type="button">보유 티어 추가</button><span class="hint" id="add-msg" role="status"></span></div>
     </div>
   </details>
 
@@ -428,11 +412,8 @@ function render(){
   LAST={rows:p.slice(-30),L:bi<p.length?ordersFor(bi):limits(p[p.length-2][1],p[p.length-1][1],S.params),avg:held(D)?costBasis(D)/held(D):0,hq:held(D)};drawChart();
   $('p-n').value=S.params.N;$('p-br').value=S.params.br;$('p-sr').value=S.params.sr;$('p-fee').value=S.params.fee;
   $('backup').value=JSON.stringify({ticker:cur,...S});
-  if(!$('n-date').value)$('n-date').value=lastD;
   if(!$('s-date').value)$('s-date').value=lastD;
-  if(!$('c-date').value)$('c-date').value=D.last||lastD;
-  if(document.activeElement!==$('c-cash'))$('c-cash').value=D.cash.toFixed(2);
-  calcSeed();calcCash();
+  calcSeed();
 }
 
 let TICKET=null;
@@ -557,7 +538,6 @@ function renderLog(){
 }
 
 function calcSeed(){const v=parseFloat($('s-seed').value);$('seed-calc').innerHTML=isFinite(v)&&v>0?`티어 금액 <b>${usd(v/S.params.N)}</b> = ${usd(v)} ÷ ${S.params.N}`:'투자금을 입력하세요.'}
-function calcCash(){const v=parseFloat($('c-cash').value);$('cash-calc').innerHTML=!isFinite(v)?'현금을 입력하세요.':D.tiers.length?`사이클 진행 중이라 티어 금액은 <b>${usd(D.tierAmt)}</b>로 고정됩니다. 전량 매도하면 그때 총자산 ÷ ${S.params.N}으로 다시 나눕니다.`:`티어 금액 <b>${usd(v/S.params.N)}</b> = 현금 ${usd(v)} ÷ ${S.params.N}`}
 
 /* ---------- chart ---------- */
 let LAST=null;
@@ -592,7 +572,7 @@ function niceStep(r){const p=10**Math.floor(Math.log10(r)),m=r/p;return (m<1.5?1
 let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(drawChart,120)});
 
 /* ---------- events ---------- */
-document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{cur=b.dataset.t;try{localStorage.setItem('loc5-ticker',cur)}catch(e){}S=getState();logAll=false;resetForm();['n-date','s-date','c-date'].forEach(k=>$(k).value='');render()});
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{cur=b.dataset.t;try{localStorage.setItem('loc5-ticker',cur)}catch(e){}S=getState();logAll=false;resetForm();$('s-date').value='';render()});
 document.querySelectorAll('#fill-types button').forEach(b=>b.onclick=()=>{
   form.touched=true;const t=b.dataset.type;setType(t);
   if(!form.editId&&TICKET){if(t==='buy'&&TICKET.bq){$('fl-qty').value=TICKET.bq;if(!FILLSIM||FILLSIM.close==null)$('fl-px').value=TICKET.L.buy.toFixed(2)}
@@ -611,15 +591,10 @@ document.addEventListener('click',e=>{
     else{del.classList.add('armed');del.textContent='삭제 확인';setTimeout(()=>{if(del.isConnected){del.classList.remove('armed');del.textContent='삭제'}},3000)}}
 });
 $('s-seed').addEventListener('input',calcSeed);
-$('c-cash').addEventListener('input',calcCash);
 $('start').onclick=()=>{if(S.example||S.ledger.length<=1)begin();else $('start-confirm').hidden=false};
 $('start-no').onclick=()=>$('start-confirm').hidden=true;
 $('start-yes').onclick=()=>{$('start-confirm').hidden=true;begin()};
 function begin(){const seed=parseFloat($('s-seed').value);if(!(seed>0))return;S=freshState(seed,$('s-date').value||latestDate(),S.params);save();resetForm();render()}
-$('cash-save').onclick=()=>{const v=parseFloat($('c-cash').value),d=$('c-date').value;if(!isFinite(v)||v<0||!d){$('cash-msg').textContent='현금과 날짜를 입력하세요.';return}
-  S.ledger.push({id:newId(),d,type:'setcash',v});save();$('c-cash').blur();render();$('cash-msg').textContent='현금 조정을 기록했습니다.'};
-$('add-tier').onclick=()=>{const q=Math.floor(+$('n-qty').value),p=+$('n-px').value,d=$('n-date').value;if(!(q>0&&p>0&&d)){$('add-msg').textContent='매수일, 수량, 매수가를 모두 입력하세요.';return}
-  S.ledger.push({id:newId(),d,type:'hold',q,p});save();$('n-qty').value=$('n-px').value='';render();$('add-msg').textContent='추가했습니다.'};
 $('save-params').onclick=()=>{S.params={N:Math.max(1,Math.round(+$('p-n').value||5)),br:+$('p-br').value,sr:+$('p-sr').value,fee:+$('p-fee').value};save();resetForm();render()};
 $('reset-params').onclick=()=>{S.params={...DEF};save();resetForm();render()};
 $('copy-backup').onclick=()=>{const t=$('backup');navigator.clipboard.writeText(t.value).then(()=>$('backup-msg').textContent='복사했습니다.',()=>{t.select();$('backup-msg').textContent='선택했습니다. 길게 눌러 복사하세요.'})};
