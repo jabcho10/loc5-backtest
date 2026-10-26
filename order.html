@@ -253,7 +253,7 @@ hr{border:0;border-top:1px solid var(--grid);margin:0}
   </section>
 
   <section>
-    <div class="shead"><h2>최근 종가와 주문선</h2><span class="muted">최근 30거래일 · 평단은 체결가 기준</span></div>
+    <div class="shead"><h2>최근 종가와 주문선</h2><span class="muted">최근 15거래일 · 평단은 체결가 기준</span></div>
     <div class="card chart" id="chart"></div>
   </section>
 
@@ -409,7 +409,7 @@ function render(){
 
   renderTicket();renderFill();renderAccount();renderLog();
   const pend=pendingIdx(), bi=pend.length?pend[0]:p.length;
-  LAST={rows:p.slice(-30),L:bi<p.length?ordersFor(bi):limits(p[p.length-2][1],p[p.length-1][1],S.params),avg:held(D)?costBasis(D)/held(D):0,hq:held(D)};drawChart();
+  LAST={rows:p.slice(-15),L:bi<p.length?ordersFor(bi):limits(p[p.length-2][1],p[p.length-1][1],S.params),avg:held(D)?costBasis(D)/held(D):0,hq:held(D)};drawChart();
   $('p-n').value=S.params.N;$('p-br').value=S.params.br;$('p-sr').value=S.params.sr;$('p-fee').value=S.params.fee;
   $('backup').value=JSON.stringify({ticker:cur,...S});
   if(!$('s-date').value)$('s-date').value=lastD;
@@ -550,7 +550,7 @@ function drawChart(){
   const x=i=>PL+i/rows.length*iw, y=v=>PT+(hi-v)/(hi-lo)*ih;
   const step=niceStep((hi-lo)/4);let g='';
   for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step){g+=`<line x1="${PL}" x2="${W-PR}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/><text x="${PL-6}" y="${y(v)+4}" text-anchor="end">${v>=100?v.toFixed(0):v.toFixed(1)}</text>`}
-  const every=narrow?10:5;
+  const every=narrow?5:3;
   rows.forEach((r,i)=>{if(i%every===0)g+=`<text x="${x(i)}" y="${H-6}" text-anchor="middle">${sd(r[0])}</text>`});
   const d=rows.map((r,i)=>(i?'L':'M')+x(i).toFixed(1)+','+y(r[1]).toFixed(1)).join('');
   const xe=x(rows.length-1), xn=x(rows.length);
