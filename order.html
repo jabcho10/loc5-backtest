@@ -381,7 +381,22 @@ function limits(c2,c1,p){const b=p.br/100,s=p.sr/100;return {buy:floorC((c2+c1)*
 const held=o=>o.tiers.reduce((a,t)=>a+t.q,0);
 const costBasis=o=>o.tiers.reduce((a,t)=>a+t.q*t.p,0);
 function buyQty(o,px,p){const f=p.fee/100;let q=Math.floor(o.tierAmt/px);if(q*px*(1+f)>o.cash)q=Math.floor(o.cash/(px*(1+f)));return Math.max(0,q)}
-function nextBizDay(d){const x=new Date(d+'T12:00:00Z');do{x.setUTCDate(x.getUTCDate()+1)}while(x.getUTCDay()===0||x.getUTCDay()===6);return x.toISOString().slice(0,10)}
+// NYSE full-day holidays by rule (one-off closures such as national days of mourning are not covered)
+const HOL={};
+function nyseHolidays(y){
+  if(HOL[y])return HOL[y];
+  const iso=(m,d)=>new Date(Date.UTC(y,m,d)).toISOString().slice(0,10);
+  const nth=(m,wd,n)=>{const f=new Date(Date.UTC(y,m,1)).getUTCDay();return iso(m,1+(wd-f+7)%7+(n-1)*7)};
+  const lastMon=m=>{const e=new Date(Date.UTC(y,m+1,0)),w=e.getUTCDay();return iso(m,e.getUTCDate()-(w+6)%7)};
+  // Sat -> Fri, Sun -> Mon; a Saturday New Year's Day is not observed
+  const obs=(m,d,ny)=>{const w=new Date(Date.UTC(y,m,d)).getUTCDay();return w===6?(ny?null:iso(m,d-1)):w===0?iso(m,d+1):iso(m,d)};
+  const a=y%19,b=Math.floor(y/100),c=y%100,dd=Math.floor(b/4),e=b%4,g=Math.floor((8*b+13)/25),h=(19*a+b-dd-g+15)%30,
+    i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,mm=Math.floor((a+11*h+19*l)/433),em=Math.floor((h+l-7*mm+90)/25),ed=(h+l-7*mm+33*em+19)%32;
+  const s=new Set([obs(0,1,true),nth(0,1,3),nth(1,1,3),iso(em-1,ed-2),lastMon(4),y>=2022?obs(5,19):null,obs(6,4),nth(8,1,1),nth(10,4,4),obs(11,25)]);
+  s.delete(null);return HOL[y]=s;
+}
+const isHoliday=s=>nyseHolidays(+s.slice(0,4)).has(s);
+function nextBizDay(d){const x=new Date(d+'T12:00:00Z');let s;do{x.setUTCDate(x.getUTCDate()+1);s=x.toISOString().slice(0,10)}while(x.getUTCDay()===0||x.getUTCDay()===6||isHoliday(s));return s}
 const idxOf=d=>P().findIndex(r=>r[0]===d);
 // orders for trading day at price index i are computed from the two closes before it
 function ordersFor(i){const p=P();if(i<2)return null;return limits(p[i-2][1],p[i-1][1],S.params)}
